@@ -136,7 +136,9 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/
 
 # JACK is most commonly used on Linux, but it is cross platform, so allow building it on any OS
 # if the FindJACK.cmake module finds POSIX headers.
-find_package(JACK)
+if(NOT ANDROID)
+  find_package(JACK)
+endif()
 cmake_dependent_option(PA_USE_JACK "Enable support for JACK Audio Connection Kit" ON JACK_FOUND OFF)
 if(PA_USE_JACK)
   target_link_libraries(PortAudio PRIVATE JACK::jack)
@@ -290,36 +292,8 @@ elseif(UNIX)
   )
   target_include_directories(PortAudio PRIVATE src/os/unix)
   target_link_libraries(PortAudio PRIVATE m)
-
-  IF(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(PKGCONFIG_LDFLAGS_PRIVATE "${PA_PKGCONFIG_LDFLAGS} -lm")
-  ELSE()
   set(PKGCONFIG_LDFLAGS_PRIVATE "${PKGCONFIG_LDFLAGS_PUBLIC} -lm -lpthread")
-    target_link_libraries(PortAudio PRIVATE pthread)
   set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -pthread")
-  ENDIF()
-
-
-  # Oboe only works on Android, which has a Unix kernel.
-  find_package(Oboe)
-  cmake_dependent_option(PA_USE_OBOE "Enable support for Oboe" ON OBOE_FOUND OFF)
-  if(PA_USE_OBOE)
-    message("--   Oboe structure found")
-    target_include_directories(PortAudio PRIVATE ${OBOE_INCLUDE_DIR})
-    target_link_libraries(PortAudio PUBLIC Oboe::oboe)
-    target_sources(PortAudio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/hostapi/oboe/pa_oboe.cpp)
-    set(PORTAUDIO_PUBLIC_HEADERS "${PORTAUDIO_PUBLIC_HEADERS}" include/pa_oboe.h)
-    target_compile_definitions(PortAudio PUBLIC PA_USE_OBOE=1)
-    set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -DPA_USE_OBOE=1")
-  endif()
-
-  IF(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    SET(PA_PKGCONFIG_LDFLAGS "${PA_PKGCONFIG_LDFLAGS} -lm")
-    SET(PA_LIBRARY_DEPENDENCIES ${PA_LIBRARY_DEPENDENCIES} m)
-  ELSE()
-    SET(PA_PKGCONFIG_LDFLAGS "${PA_PKGCONFIG_LDFLAGS} -lm -lpthread")
-    SET(PA_LIBRARY_DEPENDENCIES ${PA_LIBRARY_DEPENDENCIES} m pthread)
-  ENDIF()
 
   if(APPLE)
     set(CMAKE_MACOSX_RPATH 1)
@@ -354,6 +328,24 @@ elseif(UNIX)
 
     set(PKGCONFIG_LDFLAGS_PRIVATE
       "${PKGCONFIG_LDFLAGS_PRIVATE} -framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework CoreFoundation -framework CoreServices")
+  elseif(ANDROID)
+    set(OBOE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/oboe)
+    add_subdirectory(${OBOE_DIR} ./oboe)
+
+    option(PA_USE_OBOE "Enable support for Oboe" ON)
+
+    if(PA_USE_OBOE)
+      target_include_directories(PortAudio PRIVATE ${OBOE_DIR}/include)
+
+      add_library(oboe_interface INTERFACE)
+      target_link_libraries(oboe_interface INTERFACE oboe log)
+
+      target_link_libraries(PortAudio PRIVATE oboe_interface)
+      target_sources(PortAudio PRIVATE src/hostapi/oboe/pa_oboe.cpp)
+      set(PORTAUDIO_PUBLIC_HEADERS "${PORTAUDIO_PUBLIC_HEADERS}" include/pa_oboe.h)
+      target_compile_definitions(PortAudio PUBLIC PA_USE_OBOE=1)
+      set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -DPA_USE_OBOE=1")
+    endif()
   else()
     # Some BSDs have a reimplementation of alsalib, so do not explicitly check for Linux.
     find_package(ALSA)

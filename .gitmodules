@@ -1,0 +1,4 @@
+[submodule "oboe"]
+	path = oboe
+	url = https://github.com/google/oboe
+	branch = 1.6-stable
