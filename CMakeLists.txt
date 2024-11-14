@@ -43,33 +43,6 @@ if(PA_WARNINGS_ARE_ERRORS)
     endif()
 endif()
 
-set(PA_COMMON_SOURCES
-        src/common/pa_allocation.c
-        src/common/pa_allocation.h
-        src/common/pa_converters.c
-        src/common/pa_converters.h
-        src/common/pa_cpuload.c
-        src/common/pa_cpuload.h
-        src/common/pa_debugprint.c
-        src/common/pa_debugprint.h
-        src/common/pa_dither.c
-        src/common/pa_dither.h
-        src/common/pa_endianness.h
-        src/common/pa_front.c
-        src/common/pa_hostapi.h
-        src/common/pa_memorybarrier.h
-        src/common/pa_process.c
-        src/common/pa_process.h
-        src/common/pa_ringbuffer.c
-        src/common/pa_ringbuffer.h
-        src/common/pa_stream.c
-        src/common/pa_stream.h
-        src/common/pa_trace.c
-        src/common/pa_trace.h
-        src/common/pa_types.h
-        src/common/pa_util.h
-        )
-
 add_library(PortAudio
   ${LIBRARY_BUILD_TYPE}
   src/common/pa_allocation.c
@@ -310,12 +283,12 @@ if(WIN32)
     target_sources(PortAudio PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/portaudio.def")
   endif()
 elseif(UNIX)
-  target_sources(PortAudio PUBLIC
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/os/unix/pa_unix_hostapis.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/os/unix/pa_unix_util.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/os/unix/pa_unix_util.h
+  target_sources(PortAudio PRIVATE
+    src/os/unix/pa_unix_hostapis.c
+    src/os/unix/pa_unix_util.c
+    src/os/unix/pa_unix_util.h
   )
-  target_include_directories(PortAudio PUBLIC src/os/unix)
+  target_include_directories(PortAudio PRIVATE src/os/unix)
   target_link_libraries(PortAudio PRIVATE m)
 
   IF(CMAKE_SYSTEM_NAME STREQUAL "Android")
